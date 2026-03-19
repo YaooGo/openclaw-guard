@@ -28,8 +28,16 @@ class ApiService {
     return this.sendRequest('scan')
   }
 
-  async exportReport() {
-    return this.sendRequest('export_report')
+  async fixRisk(riskId, riskPath, riskType) {
+    return this.sendRequest('fix_risk', { riskId, riskPath, riskType })
+  }
+
+  async getSystemMetrics() {
+    return this.sendRequest('get_system_metrics')
+  }
+
+  async exportReport(scanResult) {
+    return this.sendRequest('export_report', { scanResult })
   }
 
   // 监控相关

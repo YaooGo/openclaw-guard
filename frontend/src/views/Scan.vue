@@ -104,8 +104,16 @@
               <strong>修复建议：</strong>{{ risk.fix_action }}
             </p>
             <button
-              v-if="!risk.fixed && risk.fix_action"
-              @click="fixRisk(risk)"
+              v-if="!risk.fixed && isFixable(risk)"
+              @click="handleFix(risk)"
+              class="btn btn-small btn-fix"
+              :disabled="risk.fixing"
+            >
+              {{ risk.fixing ? '正在修复...' : '立即修复' }}
+            </button>
+            <button
+              v-else-if="!risk.fixed"
+              @click="showManualFix(risk)"
               class="btn btn-small"
             >
               查看修复方法
@@ -219,22 +227,54 @@ const rescan = () => {
 }
 
 const exportReport = async () => {
+  if (!result.value) {
+    alert('请先完成扫描')
+    return
+  }
   try {
-    const data = await api.exportReport()
-    const blob = new Blob([data.report], { type: 'text/plain' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `security-report-${new Date().toISOString().slice(0, 10)}.txt`
-    a.click()
-    URL.revokeObjectURL(url)
+    // 深拷贝去除 Vue Proxy，IPC 只支持可结构化克隆的普通对象
+    const plainResult = JSON.parse(JSON.stringify(result.value))
+    const data = await api.exportReport(plainResult)
+    if (data.success) {
+      alert(`✅ 报告已保存至：\n${data.path}`)
+    } else if (data.error && data.error !== '用户取消了保存') {
+      alert('导出失败: ' + data.error)
+    }
   } catch (error) {
     console.error('导出失败:', error)
+    alert('导出失败: ' + error.message)
   }
 }
 
-const fixRisk = (risk) => {
+const fixRisk = async (risk) => {
+  risk.fixing = true
+  try {
+    const result = await api.fixRisk(risk.id, risk.path, risk.level)
+    if (result.success) {
+      risk.fixed = true
+    } else {
+      alert('修复失败: ' + (result.error || '未知错误'))
+    }
+  } catch (e) {
+    alert('修复过程中出现错误: ' + e.message)
+  } finally {
+    risk.fixing = false
+  }
+}
+
+const handleFix = (risk) => {
+  if (confirm(`确定要自动执行以下修复吗？\n\n${risk.fix_action}`)) {
+    fixRisk(risk)
+  }
+}
+
+const showManualFix = (risk) => {
   alert('修复方法：\n\n' + risk.fix_action)
+}
+
+const isFixable = (risk) => {
+  const fixableIds = ['claude_skip_permissions', 'ssh_strict_host_no', 'ssh_hash_known_hosts']
+  return risk.id.startsWith('perm_') || fixableIds.includes(risk.id)
 }
 
 const getSummaryClass = () => {
@@ -484,5 +524,16 @@ const getPriorityText = (p) => ({ high: '高优先级', medium: '中优先级', 
   border: 1px solid rgba(99,102,241,0.3);
   border-radius: 6px;
 }
-.btn-small:hover { background: rgba(99,102,241,0.35); }
+.btn-small.btn-fix {
+  background: rgba(16, 185, 129, 0.2);
+  color: #6ee7b7;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+.btn-small.btn-fix:hover:not(:disabled) {
+  background: rgba(16, 185, 129, 0.35);
+}
+.btn-small:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 </style>

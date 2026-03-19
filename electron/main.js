@@ -25,6 +25,7 @@ function createWindow() {
     minWidth: 800,
     minHeight: 600,
     title: 'OpenClaw 安全卫士',
+    icon: path.join(__dirname, '..', 'build', 'icon.icns'),
     backgroundColor: '#1a1a2e',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -713,10 +714,161 @@ async function performScan(onProgress) {
 }
 
 
+// 生成安全报告 HTML（用于 PDF 打印）
+function buildReportHTML(scanData, now) {
+  const risks = scanData?.risks || []
+  const summary = scanData?.summary || {}
+  const suggestions = scanData?.suggestions || []
+
+  const levelBadge = (l) => {
+    const map = { high: '#ef4444', medium: '#f59e0b', low: '#10b981' }
+    const text = l === 'high' ? '高危' : l === 'medium' ? '中危' : '低危'
+    return `<span style="background:${map[l]||'#888'};color:#fff;padding:2px 8px;border-radius:4px;font-size:12px">${text}</span>`
+  }
+
+  const riskRows = risks.map(r => `
+    <tr>
+      <td>${levelBadge(r.level)}</td>
+      <td>${r.title}</td>
+      <td style="font-size:12px;color:#555">${r.description}</td>
+      <td style="font-size:12px;color:#0066cc">${r.fix_action || '-'}</td>
+    </tr>`).join('')
+
+  const suggRows = suggestions.map((s, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${s.title}</td>
+      <td style="font-size:12px;color:#555">${s.description}</td>
+    </tr>`).join('')
+
+  return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; color: #1a1a2e; background: #fff; padding: 32px; }
+  .header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: #fff; padding: 28px 32px; border-radius: 12px; margin-bottom: 28px; }
+  .header h1 { font-size: 26px; font-weight: 700; margin-bottom: 6px; }
+  .header p { color: #a0a8c0; font-size: 13px; }
+  .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+  .summary-card { padding: 20px; border-radius: 10px; text-align: center; }
+  .summary-card .val { font-size: 32px; font-weight: 700; }
+  .summary-card .lbl { font-size: 13px; margin-top: 4px; opacity: 0.8; }
+  .card-danger { background: #fef2f2; color: #dc2626; }
+  .card-warn   { background: #fff7ed; color: #d97706; }
+  .card-ok     { background: #f0fdf4; color: #16a34a; }
+  .card-info   { background: #eff6ff; color: #2563eb; }
+  h2 { font-size: 18px; font-weight: 600; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 2px solid #e5e7eb; color: #1a1a2e; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 28px; }
+  th { background: #f8fafc; padding: 10px 12px; text-align: left; font-weight: 600; border-bottom: 2px solid #e5e7eb; }
+  td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+  tr:hover td { background: #f8fafc; }
+  .footer { text-align: center; font-size: 12px; color: #999; margin-top: 20px; padding-top: 16px; border-top: 1px solid #e5e7eb; }
+  .empty { text-align: center; color: #16a34a; padding: 30px; font-size: 15px; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>🛡️ OpenClaw Guard 安全扫描报告</h1>
+    <p>生成时间：${now} &nbsp;|&nbsp; 由 OpenClaw Guard v1.0.0 自动生成</p>
+  </div>
+
+  <div class="summary-grid">
+    <div class="summary-card card-danger">
+      <div class="val">${summary.high_risks || 0}</div>
+      <div class="lbl">高危风险</div>
+    </div>
+    <div class="summary-card card-warn">
+      <div class="val">${summary.medium_risks || 0}</div>
+      <div class="lbl">中危风险</div>
+    </div>
+    <div class="summary-card card-ok">
+      <div class="val">${summary.low_risks || 0}</div>
+      <div class="lbl">低危风险</div>
+    </div>
+    <div class="summary-card card-info">
+      <div class="val">${summary.total_suggestions || 0}</div>
+      <div class="lbl">优化建议</div>
+    </div>
+  </div>
+
+  <h2>风险详情</h2>
+  ${risks.length > 0 ? `
+  <table>
+    <thead><tr><th style="width:60px">级别</th><th style="width:200px">标题</th><th>描述</th><th style="width:220px">修复建议</th></tr></thead>
+    <tbody>${riskRows}</tbody>
+  </table>` : `<div class="empty">✅ 未发现风险，系统状态良好</div>`}
+
+  ${suggestions.length > 0 ? `
+  <h2>优化建议</h2>
+  <table>
+    <thead><tr><th style="width:40px">#</th><th style="width:200px">建议</th><th>说明</th></tr></thead>
+    <tbody>${suggRows}</tbody>
+  </table>` : ''}
+
+  <div class="footer">OpenClaw Guard • AI 编程助手安全守护工具 • <a href="https://github.com/YaooGo/openclaw-guard">github.com/YaooGo/openclaw-guard</a></div>
+</body>
+</html>`
+}
+
 // 清空日志
 function clearLogs() {
   operationLogs = []
   operationCount = { total: 0, blocked: 0, allowed: 0 }
+}
+
+// 按 ID 修复特定的风险项
+async function fixRisk(riskId, riskPath, riskType) {
+  try {
+    // 1. 权限类风险 (perm_...)
+    if (riskId.startsWith('perm_')) {
+      if (!fs.existsSync(riskPath)) return { success: false, error: '文件不存在' }
+      const isDir = fs.statSync(riskPath).isDirectory()
+      const targetMode = isDir ? 0o700 : 0o600
+      fs.chmodSync(riskPath, targetMode)
+      return { success: true }
+    }
+
+    // 2. Claude 设置风险 (claude_skip_permissions)
+    if (riskId === 'claude_skip_permissions') {
+      const content = safeRead(riskPath)
+      if (!content) return { success: false, error: '无法读取配置文件' }
+      let cfg = safeParseJSON(content)
+      if (!cfg) return { success: false, error: '配置文件格式错误' }
+      
+      // 禁用跳过权限
+      if (cfg.dangerouslySkipPermissions !== undefined) cfg.dangerouslySkipPermissions = false
+      if (cfg.skipPermissionPrompts !== undefined) cfg.skipPermissionPrompts = false
+      
+      fs.writeFileSync(riskPath, JSON.stringify(cfg, null, 2))
+      return { success: true }
+    }
+
+    // 3. SSH 配置风险 (ssh_strict_host_no, ssh_hash_known_hosts)
+    if (riskId === 'ssh_strict_host_no' || riskId === 'ssh_hash_known_hosts') {
+      const sshConfigPath = path.join(os.homedir(), '.ssh', 'config')
+      let content = safeRead(sshConfigPath) || ''
+
+      if (riskId === 'ssh_strict_host_no') {
+        content = content.replace(/StrictHostKeyChecking\s+no/gi, 'StrictHostKeyChecking yes')
+      } else if (riskId === 'ssh_hash_known_hosts') {
+        if (!content.includes('HashKnownHosts')) {
+          content += '\nHost *\n  HashKnownHosts yes\n'
+        } else {
+          content = content.replace(/HashKnownHosts\s+no/gi, 'HashKnownHosts yes')
+        }
+      }
+
+      fs.writeFileSync(sshConfigPath, content)
+      return { success: true }
+    }
+
+    return { success: false, error: '该类型的风险暂不支持自动修复' }
+  } catch (e) {
+    console.error('Fix risk error:', e)
+    return { success: false, error: e.message }
+  }
 }
 
 // IPC 处理
@@ -740,6 +892,14 @@ ipcMain.handle('send-request', async (event, request) => {
       return { result: { summary: { high_risks: 0, medium_risks: 0, low_risks: 0, total_risks: 0, total_suggestions: 0 }, risks: [], suggestions: [] } }
     }
   }
+
+  // 修复风险
+  if (request.action === 'fix_risk') {
+    const { riskId, riskPath, riskType } = request.data || {}
+    const result = await fixRisk(riskId, riskPath, riskType)
+    return result
+  }
+
 
   // 监控状态
   if (request.action === 'get_monitor_status') {
@@ -801,9 +961,71 @@ ipcMain.handle('send-request', async (event, request) => {
     return { success: true }
   }
 
-  // 导出报告
+  // 系统资源指标
+  if (request.action === 'get_system_metrics') {
+    const cpus = os.cpus()
+    // 计算 CPU 使用率（取每个核的平均占用）
+    const cpuUsage = cpus.reduce((sum, cpu) => {
+      const total = Object.values(cpu.times).reduce((a, b) => a + b, 0)
+      return sum + ((total - cpu.times.idle) / total) * 100
+    }, 0) / cpus.length
+
+    const totalMem = os.totalmem()
+    const freeMem  = os.freemem()
+    const usedMem  = totalMem - freeMem
+
+    return {
+      cpu: Math.round(cpuUsage),
+      memUsed: Math.round(usedMem / 1024 / 1024),
+      memTotal: Math.round(totalMem / 1024 / 1024),
+      memPercent: Math.round((usedMem / totalMem) * 100),
+      uptime: Math.floor(os.uptime()),
+      platform: os.platform(),
+      cpuCores: cpus.length,
+      cpuModel: cpus[0]?.model || 'Unknown'
+    }
+  }
+
+  // 导出 PDF 报告
   if (request.action === 'export_report') {
-    return { report: 'Security Report Content' }
+    try {
+      const scanData = request.data?.scanResult || null
+      const now = new Date().toLocaleString('zh-CN')
+
+      // 生成 HTML 内容用于打印
+      const html = buildReportHTML(scanData, now)
+
+      // 创建一个隐藏的内容窗口来渲染 HTML
+      const reportWin = new BrowserWindow({
+        show: false,
+        webPreferences: { nodeIntegration: false }
+      })
+
+      await reportWin.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html))
+      await new Promise(r => setTimeout(r, 800))  // 等待渲染
+
+      const pdfBuffer = await reportWin.webContents.printToPDF({
+        printBackground: true,
+        pageSize: 'A4'
+      })
+      reportWin.close()
+
+      // 弹出保存对话框
+      const { filePath } = await dialog.showSaveDialog(mainWindow, {
+        title: '保存安全报告',
+        defaultPath: `openclaw-guard-report-${Date.now()}.pdf`,
+        filters: [{ name: 'PDF', extensions: ['pdf'] }]
+      })
+
+      if (filePath) {
+        fs.writeFileSync(filePath, pdfBuffer)
+        return { success: true, path: filePath }
+      }
+      return { success: false, error: '用户取消了保存' }
+    } catch (e) {
+      console.error('PDF export error:', e)
+      return { success: false, error: e.message }
+    }
   }
 
   return {}

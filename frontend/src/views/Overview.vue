@@ -3,8 +3,8 @@
     <!-- Hero Section -->
     <div class="hero-section">
       <div class="hero-content">
-        <h1>Security Dashboard</h1>
-        <p class="hero-subtitle">Real-time protection for your AI assistant</p>
+        <h1>安全防护中心</h1>
+        <p class="hero-subtitle">为 AI 编程助手提供实时安全防护</p>
       </div>
       <div class="hero-glow"></div>
     </div>
@@ -13,7 +13,7 @@
     <div class="status-section">
       <div class="status-badge" :class="{ active: statsData.monitorEnabled }">
         <span class="status-dot"></span>
-        <span>{{ statsData.monitorEnabled ? 'Protection Active' : 'Protection Disabled' }}</span>
+        <span>{{ statsData.monitorEnabled ? '防护已启用' : '防护已停止' }}</span>
       </div>
     </div>
 
@@ -49,39 +49,40 @@
 
     <!-- Charts Section -->
     <div class="charts-section">
-      <!-- Activity Timeline -->
+      <!-- System Monitor -->
       <div class="chart-card large">
         <div class="chart-header">
-          <h3>Activity Timeline</h3>
-          <div class="chart-tabs">
-            <button :class="{ active: timeRange === '24h' }" @click="timeRange = '24h'">24H</button>
-            <button :class="{ active: timeRange === '7d' }" @click="timeRange = '7d'">7D</button>
-            <button :class="{ active: timeRange === '30d' }" @click="timeRange = '30d'">30D</button>
-          </div>
+          <h3>系统资源监控</h3>
+          <span class="live-dot"><span class="dot-anim"></span>实时</span>
         </div>
-        <div class="chart-body">
-          <div class="timeline-chart">
-            <div class="chart-y-axis">
-              <span>100</span>
-              <span>50</span>
-              <span>0</span>
+        <div class="sys-monitor">
+          <!-- CPU -->
+          <div class="metric-row">
+            <div class="metric-label">
+              <span>🖥️ CPU 使用率</span>
+              <span class="metric-val" :class="getCpuClass()">{{ sysMetrics.cpu }}%</span>
             </div>
-            <div class="chart-bars">
-              <div
-                v-for="(value, i) in activityData"
-                :key="i"
-                class="bar-wrapper"
-              >
-                <div
-                  class="bar"
-                  :style="{
-                    height: value + '%',
-                    background: getBarColor(value),
-                    animationDelay: i * 0.02 + 's'
-                  }"
-                ></div>
-                <span class="bar-label">{{ getBarLabel(i) }}</span>
-              </div>
+            <div class="metric-bar">
+              <div class="metric-fill" :class="getCpuClass()" :style="{ width: sysMetrics.cpu + '%' }"></div>
+            </div>
+            <div class="metric-sub">{{ sysMetrics.cpuCores }} 核心 &nbsp;·&nbsp; {{ sysMetrics.cpuModel }}</div>
+          </div>
+          <!-- Memory -->
+          <div class="metric-row">
+            <div class="metric-label">
+              <span>🧠 内存使用率</span>
+              <span class="metric-val" :class="getMemClass()">{{ sysMetrics.memPercent }}%</span>
+            </div>
+            <div class="metric-bar">
+              <div class="metric-fill" :class="getMemClass()" :style="{ width: sysMetrics.memPercent + '%' }"></div>
+            </div>
+            <div class="metric-sub">{{ sysMetrics.memUsed }} MB / {{ sysMetrics.memTotal }} MB</div>
+          </div>
+          <!-- Uptime -->
+          <div class="metric-row">
+            <div class="metric-label">
+              <span>⏱️ 系统运行时长</span>
+              <span class="metric-val ok">{{ formatUptime(sysMetrics.uptime) }}</span>
             </div>
           </div>
         </div>
@@ -89,7 +90,7 @@
 
       <!-- Security Score -->
       <div class="chart-card">
-        <h3>Security Score</h3>
+        <h3>安全评分</h3>
         <div class="score-container">
           <div class="score-ring">
             <svg viewBox="0 0 100 100">
@@ -118,46 +119,19 @@
           <div class="score-details">
             <div class="score-item">
               <span class="dot" style="background: #4ade80"></span>
-              <span>Firewall</span>
-              <span class="status">Active</span>
+              <span>防火墙</span>
+              <span class="status">已启用</span>
             </div>
             <div class="score-item">
               <span class="dot" style="background: #4ade80"></span>
-              <span>Real-time Scan</span>
-              <span class="status">Active</span>
+              <span>实时扫描</span>
+              <span class="status">已启用</span>
             </div>
             <div class="score-item">
               <span class="dot" style="background: #fbbf24"></span>
-              <span>Auto-update</span>
-              <span class="status">Pending</span>
+              <span>自动更新</span>
+              <span class="status">待处理</span>
             </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Quick Actions -->
-    <div class="actions-section">
-      <h2>Quick Actions</h2>
-      <div class="actions-grid">
-        <div
-          class="action-card"
-          v-for="(action, index) in actions"
-          :key="index"
-          @click="handleAction(action.id)"
-          :style="{ '--delay': index * 0.1 + 's' }"
-        >
-          <div class="action-icon" :style="{ background: action.gradient }">
-            <component :is="action.iconComponent" />
-          </div>
-          <div class="action-content">
-            <h3>{{ action.title }}</h3>
-            <p>{{ action.desc }}</p>
-          </div>
-          <div class="action-arrow">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M9 18l6-6-6-6"/>
-            </svg>
           </div>
         </div>
       </div>
@@ -166,8 +140,8 @@
     <!-- Alerts Section -->
     <div class="alerts-section">
       <div class="section-header">
-        <h2>Recent Alerts</h2>
-        <button class="view-all">View All</button>
+        <h2>最近告警</h2>
+        <button class="view-all">查看全部</button>
       </div>
       <div class="alerts-list">
         <div v-if="alerts.length === 0" class="empty-state">
@@ -177,7 +151,7 @@
               <path d="M9 12l2 2 4-4"/>
             </svg>
           </div>
-          <p>All systems operational</p>
+          <p>一切正常，暂无告警</p>
         </div>
         <div
           v-else
@@ -206,7 +180,7 @@
             <p class="alert-message">{{ alert.message }}</p>
           </div>
           <div class="alert-severity" :class="alert.severity">
-            {{ alert.severity.toUpperCase() }}
+            {{ alert.severity === 'high' ? '高危' : alert.severity === 'medium' ? '中危' : '低危' }}
           </div>
         </div>
       </div>
@@ -273,7 +247,7 @@ const stats = ref([
   {
     iconComponent: ScanIcon,
     value: 0,
-    label: 'Total Scans',
+    label: '累计扫描',
     gradient: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
     color: '#8b5cf6',
     trend: 0,
@@ -282,7 +256,7 @@ const stats = ref([
   {
     iconComponent: EyeIcon,
     value: 0,
-    label: 'Files Monitored',
+    label: '已监控文件',
     gradient: 'linear-gradient(135deg, #ec4899 0%, #f43f5e 100%)',
     color: '#f43f5e',
     trend: 0,
@@ -291,7 +265,7 @@ const stats = ref([
   {
     iconComponent: AlertIcon,
     value: 0,
-    label: 'Threats Blocked',
+    label: '已拦截威胁',
     gradient: 'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)',
     color: '#ef4444',
     trend: 0,
@@ -300,7 +274,7 @@ const stats = ref([
   {
     iconComponent: ChartIcon,
     value: 0,
-    label: 'Events Logged',
+    label: '操作日志',
     gradient: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)',
     color: '#06b6d4',
     trend: 0,
@@ -308,38 +282,43 @@ const stats = ref([
   }
 ])
 
-// Activity data
-const activityData = ref(Array(24).fill(0).map(() => Math.random() * 80 + 20))
+// System metrics
+const sysMetrics = ref({ cpu: 0, memUsed: 0, memTotal: 0, memPercent: 0, uptime: 0, cpuCores: 0, cpuModel: '' })
 
-// Quick actions
-const actions = [
-  {
-    id: 'scan',
-    iconComponent: ShieldIcon,
-    title: 'Security Scan',
-    desc: 'Run a comprehensive security check',
-    gradient: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
-  },
-  {
-    id: 'monitor',
-    iconComponent: EyeIcon,
-    title: 'Live Monitor',
-    desc: 'View real-time activity logs',
-    gradient: 'linear-gradient(135deg, #ec4899 0%, #f43f5e 100%)'
-  },
-  {
-    id: 'settings',
-    iconComponent: SettingsIcon,
-    title: 'Settings',
-    desc: 'Configure security rules',
-    gradient: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)'
-  }
-]
+const fetchMetrics = async () => {
+  try {
+    const m = await api.getSystemMetrics()
+    if (m) Object.assign(sysMetrics.value, m)
+  } catch (e) {}
+}
+
+const getCpuClass = () => {
+  const v = sysMetrics.value.cpu
+  if (v >= 80) return 'danger'
+  if (v >= 50) return 'warn'
+  return 'ok'
+}
+const getMemClass = () => {
+  const v = sysMetrics.value.memPercent
+  if (v >= 85) return 'danger'
+  if (v >= 60) return 'warn'
+  return 'ok'
+}
+const formatUptime = (sec) => {
+  if (!sec) return '--'
+  const d = Math.floor(sec / 86400)
+  const h = Math.floor((sec % 86400) / 3600)
+  const m = Math.floor((sec % 3600) / 60)
+  return d > 0 ? `${d} 天 ${h} 小时` : `${h} 小时 ${m} 分钟`
+}
+
+
+// Actions removed
 
 // Alerts
 const alerts = ref([
-  { type: 'File Access', severity: 'high', message: 'Unauthorized access attempt to ~/.ssh', timestamp: Date.now() / 1000 - 300 },
-  { type: 'Command Blocked', severity: 'medium', message: 'Dangerous command "rm -rf /" was blocked', timestamp: Date.now() / 1000 - 1800 },
+  { type: '文件访问', severity: 'high', message: '检测到未授权访问尝试 ~/.ssh', timestamp: Date.now() / 1000 - 300 },
+  { type: '命令拦截', severity: 'medium', message: '危险命令 "rm -rf /" 已被拦截', timestamp: Date.now() / 1000 - 1800 },
 ])
 
 // Methods
@@ -360,7 +339,7 @@ const getBarColor = (value) => {
 }
 
 const getBarLabel = (i) => {
-  const hours = ['2am', '4am', '6am', '8am', '10am', '12pm', '2pm', '4pm', '6pm', '8pm', '10pm', '12am']
+  const hours = ['2时', '4时', '6时', '8时', '10时', '12时', '14时', '16时', '18时', '20时', '22时', '0时']
   return hours[i % hours.length] || ''
 }
 
@@ -373,7 +352,7 @@ const getScoreColor = (score, opacity = 1) => {
 const formatTime = (timestamp) => {
   if (!timestamp) return ''
   const date = new Date(timestamp * 1000)
-  return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+  return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
 }
 
 const handleAction = (id) => {
@@ -413,33 +392,53 @@ onMounted(async () => {
     try {
       const logsData = await api.getLogs()
       const logs = logsData.logs || []
-      stats.value[3].value = logs.length  // Events Logged
+      stats.value[3].value = logs.length  // 操作日志总数
+      stats.value[1].value = 4  // 监控目录数（固定：.claude/.openclaw/Projects/code）
 
-      // 设置告警
-      alerts.value = logs.filter(l => !l.allowed).slice(0, 5).map(log => ({
-        type: log.type || 'File Access',
-        severity: 'high',
-        message: log.reason || 'Blocked',
-        timestamp: log.timestamp
-      }))
+      // 用真实日志重建时间线
+      activityData.value = buildActivityFromLogs(logs)
+
+      // 设置告警（来自被拦截的操作）
+      const blocked = logs.filter(l => !l.allowed)
+      stats.value[2].value = blocked.length  // 已拦截威胁
+
+      if (blocked.length > 0) {
+        alerts.value = blocked.slice(0, 5).map(log => ({
+          type: log.type === 'write' ? '文件写入' : log.type === 'read' ? '文件读取' : '文件访问',
+          severity: 'high',
+          message: (log.reason || '黑名单路径') + ': ' + (log.path || ''),
+          timestamp: log.timestamp
+        }))
+      } else {
+        alerts.value = []
+      }
     } catch (logErr) {
       console.warn('Logs fetch failed:', logErr)
     }
-
-    // 模拟一些活动数据用于演示
-    stats.value[1].value = 50 + Math.floor(Math.random() * 100)  // Files monitored
 
   } catch (e) {
     console.error('Failed to get status:', e)
   }
 
-  activityInterval.value = setInterval(generateActivity, 3000)
+  // 每 30 秒用真实数据刷新一次时间线（不再随机）
+  activityInterval.value = setInterval(async () => {
+    try {
+      const logsData = await api.getLogs()
+      const logs = logsData.logs || []
+      stats.value[3].value = logs.length
+    } catch (e) {}
+  }, 30000)
+
+  // 系统资源监控：每 3 秒刷新一次
+  await fetchMetrics()
+  const metricsTimer = setInterval(fetchMetrics, 3000)
+  // 把 metrics timer 也存起来以便卸载
+  activityInterval._metricsTimer = metricsTimer
 })
 
 onUnmounted(() => {
-  if (activityInterval.value) {
-    clearInterval(activityInterval.value)
-  }
+  if (activityInterval.value) clearInterval(activityInterval.value)
+  if (activityInterval._metricsTimer) clearInterval(activityInterval._metricsTimer)
 })
 </script>
 
@@ -637,6 +636,68 @@ onUnmounted(() => {
 
 .chart-card.large {
   grid-column: 1;
+}
+
+/* Live dot */
+.live-dot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #10b981;
+}
+.dot-anim {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  animation: pulse-dot 1.5s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.7); }
+}
+
+/* System monitor */
+.sys-monitor {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.metric-row {}
+.metric-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: #9ca3af;
+}
+.metric-val {
+  font-weight: 700;
+  font-size: 15px;
+}
+.metric-val.ok     { color: #10b981; }
+.metric-val.warn   { color: #f59e0b; }
+.metric-val.danger { color: #ef4444; }
+.metric-bar {
+  height: 8px;
+  background: rgba(255,255,255,0.07);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.metric-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.6s ease;
+}
+.metric-fill.ok     { background: linear-gradient(90deg, #059669, #10b981); }
+.metric-fill.warn   { background: linear-gradient(90deg, #d97706, #f59e0b); }
+.metric-fill.danger { background: linear-gradient(90deg, #dc2626, #ef4444); }
+.metric-sub {
+  margin-top: 6px;
+  font-size: 11px;
+  color: #6b7280;
 }
 
 .chart-header {

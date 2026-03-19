@@ -76,19 +76,22 @@ npm run dev
 NODE_ENV=development npm start
 ```
 
-### 构建生产版本
+### 构建与打包 (Production Build)
+
+我们提供了根目录下的统一构建指令：
 
 ```bash
-# 1. 构建前端
-cd electron
-npm run build
+# 1. 安装所有依赖
+npm run install:all
 
-# 2. 编译 Go 后端
-npm run build-go
-
-# 3. 打包 Electron 应用
-npm run dist:mac
+# 2. 一键构建并生成 macOS 安装包 (.dmg)
+npm run build:all
 ```
+
+构建完成后，安装包将生成在 `electron/dist/` 目录下。
+
+> [!NOTE]
+> 为确保构建成功，请确保本地已安装 Go 1.23+ 和 Node.js 18+。
 
 ## 项目结构
 

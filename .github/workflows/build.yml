@@ -1,0 +1,98 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'          # Release: 只在打 tag 时触发
+  pull_request:
+    branches: [ main ] # CI: 每次 PR 向 main 时自动构建验证
+
+jobs:
+  # ── 构建验证（PR 时运行，合并前确保代码不出错）──────────────────────────────
+  build-check:
+    if: github.event_name == 'pull_request'
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          cd frontend && npm install
+          cd ../electron && npm install
+
+      - name: Build Go Backend
+        run: |
+          mkdir -p electron/bin
+          cd backend && go build -o ../electron/bin/guard ./cmd/guard
+
+      - name: Go Vet
+        run: cd backend && go vet ./...
+
+      - name: Build Frontend
+        run: cd frontend && npm run build
+
+  # ── 发布 Release（打 tag 时运行，自动生成 .dmg 并发布）──────────────────────
+  release-mac:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    runs-on: macos-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          cd frontend && npm install
+          cd ../electron && npm install
+
+      - name: Build Go Backend
+        run: |
+          mkdir -p electron/bin
+          cd backend && go build -o ../electron/bin/guard ./cmd/guard
+
+      - name: Build Frontend
+        run: cd frontend && npm run build
+
+      - name: Package macOS DMG
+        env:
+          CSC_LINK_SKIP: true
+        run: cd electron && npm run dist:mac
+
+      - name: Create GitHub Release & Upload DMG
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "OpenClaw Guard ${{ github.ref_name }}"
+          body: |
+            ## OpenClaw Guard ${{ github.ref_name }}
+
+            ### 安装方法
+            1. 下载下方的 `.dmg` 文件
+            2. 双击安装，拖入 Applications 文件夹
+            3. 首次运行可能需要在「系统设置 > 安全性」中允许运行
+
+            ### 更新内容
+            请查看 [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md)
+          files: electron/dist/*.dmg
+          draft: false
+          prerelease: false

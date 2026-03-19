@@ -1,0 +1,15 @@
+{
+  "name": "openclaw-guard-root",
+  "version": "1.0.0",
+  "private": true,
+  "description": "OpenClaw Guard - Project Management root",
+  "scripts": {
+    "install:all": "npm install && cd frontend && npm install && cd ../electron && npm install",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:electron": "cd electron && NODE_ENV=development npm start",
+    "build:frontend": "cd frontend && npm run build",
+    "build:go": "cd backend && go build -o ../electron/bin/guard ./cmd/guard",
+    "build:electron": "cd electron && npm run dist:mac",
+    "build:all": "npm run build:go && npm run build:frontend && npm run build:electron"
+  }
+}
