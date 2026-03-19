@@ -1,0 +1,46 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+electron/bin/
+backend/guard
+
+# Build outputs
+electron/dist/
+frontend/dist/
+frontend/node_modules/
+electron/node_modules/
+backend/vendor/
+dist/
+release/
+out/
+*.app/
+*.dmg/
+*.pkg/
+*.zip/
+
+# Go
+vendor/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.local
+
+# Claude
+.claude/

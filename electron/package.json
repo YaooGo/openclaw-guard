@@ -1,0 +1,36 @@
+{
+  "name": "openclaw-guard",
+  "version": "1.0.0",
+  "description": "OpenClaw 安全卫士 - AI 编程助手安全检测与监控工具",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "cd ../frontend && npm run build",
+    "build-go": "cd ../backend && go build -o ../electron/bin/guard ./cmd/guard",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "dist:mac": "electron-builder --mac"
+  },
+  "build": {
+    "appId": "com.openclaw.guard",
+    "productName": "OpenClaw Guard",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "dist/**/*",
+      "bin/guard"
+    ],
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.utilities",
+      "icon": "build/icon.icns"
+    }
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.0"
+  }
+}
