@@ -66,18 +66,24 @@ jobs:
           cd frontend && npm install
           cd ../electron && npm install
 
-      - name: Build Go Backend
+      - name: Build Go Backend (Universal Binary)
         run: |
           mkdir -p electron/bin
-          cd backend && go build -o ../electron/bin/guard ./cmd/guard
+          cd backend
+          GOOS=darwin GOARCH=amd64 go build -o ../electron/bin/guard_amd64 ./cmd/guard
+          GOOS=darwin GOARCH=arm64 go build -o ../electron/bin/guard_arm64 ./cmd/guard
+          lipo -create -output ../electron/bin/guard \
+            ../electron/bin/guard_amd64 \
+            ../electron/bin/guard_arm64
+          rm ../electron/bin/guard_amd64 ../electron/bin/guard_arm64
 
       - name: Build Frontend
         run: cd frontend && npm run build
 
-      - name: Package macOS DMG
+      - name: Package macOS Universal DMG
         env:
           CSC_LINK_SKIP: true
-        run: cd electron && npm run dist:mac
+        run: cd electron && npm run dist:mac:universal
 
       - name: Create GitHub Release & Upload DMG
         uses: softprops/action-gh-release@v2
