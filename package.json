@@ -8,8 +8,8 @@
     "dev:frontend": "cd frontend && npm run dev",
     "dev:electron": "cd electron && NODE_ENV=development npm start",
     "build:frontend": "cd frontend && npm run build",
-    "build:go": "cd backend && go build -o ../electron/bin/guard ./cmd/guard",
-    "build:electron": "cd electron && npm run dist:mac",
+    "build:go": "cd backend && GOOS=darwin GOARCH=amd64 go build -o ../electron/bin/guard_amd64 ./cmd/guard && GOOS=darwin GOARCH=arm64 go build -o ../electron/bin/guard_arm64 ./cmd/guard && lipo -create -output ../electron/bin/guard ../electron/bin/guard_amd64 ../electron/bin/guard_arm64 && rm ../electron/bin/guard_amd64 ../electron/bin/guard_arm64",
+    "build:electron": "cd electron && npm run dist:mac:universal",
     "build:all": "npm run build:go && npm run build:frontend && npm run build:electron"
   }
 }
