@@ -19,11 +19,12 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.23'
+          cache-dependency-path: backend/go.sum
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Install dependencies
         run: |
@@ -55,35 +56,38 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.23'
+          cache-dependency-path: backend/go.sum
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Install dependencies
         run: |
           cd frontend && npm install
           cd ../electron && npm install
 
-      - name: Build Go Backend (Universal Binary)
+      - name: Build Go Backend (x64 + arm64)
         run: |
           mkdir -p electron/bin
           cd backend
           GOOS=darwin GOARCH=amd64 go build -o ../electron/bin/guard_amd64 ./cmd/guard
           GOOS=darwin GOARCH=arm64 go build -o ../electron/bin/guard_arm64 ./cmd/guard
-          lipo -create -output ../electron/bin/guard \
-            ../electron/bin/guard_amd64 \
-            ../electron/bin/guard_arm64
-          rm ../electron/bin/guard_amd64 ../electron/bin/guard_arm64
 
       - name: Build Frontend
         run: cd frontend && npm run build
 
-      - name: Package macOS Universal DMG
+      - name: Package macOS DMG (x64 + arm64)
         env:
           CSC_LINK_SKIP: true
-        run: cd electron && npm run dist:mac:universal
+        run: |
+          # 分别打包 x64（使用 x64 go binary）
+          cp electron/bin/guard_amd64 electron/bin/guard
+          cd electron && npm run dist:mac && cd ..
+          # 分别打包 arm64（使用 arm64 go binary）
+          cp electron/bin/guard_arm64 electron/bin/guard
+          cd electron && npm run dist:mac:arm64 && cd ..
 
       - name: Create GitHub Release & Upload DMG
         uses: softprops/action-gh-release@v2
