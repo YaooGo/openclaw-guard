@@ -1,9 +1,10 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron')
+const { app, BrowserWindow, ipcMain, dialog, Tray, Menu, nativeImage, Notification } = require('electron')
 const path = require('path')
 const fs = require('fs')
 const os = require('os')
 
 let mainWindow = null
+let tray = null
 let fileWatchers = []  // 存储所有活跃的 watcher 实例
 let monitorEnabled = false
 let operationCount = { total: 0, blocked: 0, allowed: 0 }
@@ -44,6 +45,76 @@ function createWindow() {
   mainWindow.on('closed', () => {
     mainWindow = null
   })
+
+  // 最小化到托盘（不退出）
+  mainWindow.on('close', (e) => {
+    if (!app.quittingApp) {
+      e.preventDefault()
+      mainWindow.hide()
+      updateTrayMenu()
+    }
+  })
+}
+
+// 创建系统托盘
+function createTray() {
+  // 使用应用图标作为托盘图标（16x16）
+  const iconPath = path.join(__dirname, '..', 'build', 'icon.icns')
+  let trayIcon
+  try {
+    trayIcon = nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 })
+  } catch (e) {
+    trayIcon = nativeImage.createEmpty()
+  }
+
+  tray = new Tray(trayIcon)
+  tray.setToolTip('OpenClaw Guard')
+  updateTrayMenu()
+
+  tray.on('click', () => {
+    if (mainWindow) {
+      if (mainWindow.isVisible()) {
+        mainWindow.focus()
+      } else {
+        mainWindow.show()
+        mainWindow.focus()
+      }
+    }
+  })
+}
+
+function updateTrayMenu() {
+  if (!tray) return
+  const statusLabel = monitorEnabled ? '🟢 防护中' : '🔴 已停止'
+  const contextMenu = Menu.buildFromTemplate([
+    { label: 'OpenClaw Guard', enabled: false },
+    { label: statusLabel, enabled: false },
+    { type: 'separator' },
+    {
+      label: monitorEnabled ? '停止监控' : '启动监控',
+      click: () => {
+        monitorEnabled = !monitorEnabled
+        if (mainWindow) mainWindow.webContents.send('guard-event', { type: 'monitor_toggled', enabled: monitorEnabled })
+        updateTrayMenu()
+      }
+    },
+    {
+      label: '打开主界面',
+      click: () => {
+        if (mainWindow) { mainWindow.show(); mainWindow.focus() }
+      }
+    },
+    { type: 'separator' },
+    {
+      label: '退出',
+      click: () => {
+        app.quittingApp = true
+        app.quit()
+      }
+    }
+  ])
+  tray.setContextMenu(contextMenu)
+  tray.setTitle(monitorEnabled ? ' 防护中' : ' 已停止')
 }
 
 // 展开 ~ 为用户目录
@@ -117,6 +188,25 @@ function logOperation(type, filePath, command = null, allowed = true, reason = '
         operation: log
       }
     })
+  }
+
+  // 危险操作 → 系统原生通知
+  if (!allowed && Notification.isSupported()) {
+    const isDangerous = command && dangerousCommands.some(cmd => command.includes(cmd))
+    const title = isDangerous ? '⚠️ 危险操作已拦截！' : '🛡️ OpenClaw Guard 已拦截'
+    const body = command
+      ? `危险命令：${command.slice(0, 80)}`
+      : `高危路径访问：${filePath ? filePath.replace(os.homedir(), '~') : ''}`
+    const notif = new Notification({
+      title,
+      body,
+      silent: false,
+      icon: path.join(__dirname, '..', 'build', 'icon.icns')
+    })
+    notif.on('click', () => {
+      if (mainWindow) { mainWindow.show(); mainWindow.focus() }
+    })
+    notif.show()
   }
 }
 
@@ -922,6 +1012,7 @@ ipcMain.handle('send-request', async (event, request) => {
     } else {
       stopFileMonitoring()
     }
+    updateTrayMenu()  // 同步更新托盘状态
     return { success: true, enabled }
   }
 
@@ -1034,12 +1125,17 @@ ipcMain.handle('send-request', async (event, request) => {
 // 应用生命周期
 app.whenReady().then(() => {
   createWindow()
+  createTray()
 
   // 启动时自动开启监控
   startFileMonitoring()
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
+    // 点击 Dock 图标：如果窗口存在则显示，否则新建
+    if (mainWindow) {
+      mainWindow.show()
+      mainWindow.focus()
+    } else {
       createWindow()
     }
   })
